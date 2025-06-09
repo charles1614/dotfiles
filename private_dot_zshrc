@@ -1,0 +1,91 @@
+# =============================================================================
+# 1. Powerlevel10k Instant Prompt (must be at the very top)
+# =============================================================================
+# This block enables Powerlevel10k's instant prompt feature for a fast shell startup.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# =============================================================================
+# 2. Zinit Plugin Manager (Installer & Initialization)
+# =============================================================================
+# This block ensures Zinit is installed if it's missing.
+if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
+    print -P "%F{33} %F{220}Installing Zinit Plugin Manager...%f"
+    command mkdir -p "$HOME/.local/share/zinit" && command chmod g-rwX "$HOME/.local/share/zinit"
+    command git clone https://github.com/zdharma-continuum/zinit "$HOME/.local/share/zinit/zinit.git" && \
+        print -P "%F{33} %F{34}Installation successful.%f%b" || \
+        print -P "%F{160} The clone has failed.%f%b"
+fi
+
+source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
+autoload -Uz _zinit
+(( ${+_comps} )) && _comps[zinit]=_zinit
+
+# =============================================================================
+# 3. Zinit Plugin & Theme Loading
+# =============================================================================
+
+# -- Zinit Annexes (for extended functionality) --
+zinit light-mode for \
+    zdharma-continuum/zinit-annex-as-monitor \
+    zdharma-continuum/zinit-annex-bin-gem-node \
+    zdharma-continuum/zinit-annex-patch-dl \
+    zdharma-continuum/zinit-annex-rust
+
+# -- Core Shell Functionality --
+# Syntax highlighting (must be loaded before autosuggestions)
+zinit light zdharma-continuum/fast-syntax-highlighting
+# Command auto-suggestions based on history
+zinit light zsh-users/zsh-autosuggestions
+# Multi-word history search
+zinit light zdharma-continuum/history-search-multi-word
+
+# -- Completions --
+# Additional completions for many common tools (e.g., tmux, docker)
+zinit light zsh-users/zsh-completions
+
+# -- Utility & Framework Plugins --
+# Provides convenient git aliases (e.g., gco, gaa, gl)
+zinit snippet OMZ::plugins/git/git.plugin.zsh
+# Provides completions for asdf version manager
+zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh
+
+# -- Theme --
+# Powerlevel10k theme with optimized 'git clone'
+zinit ice depth"1"
+zinit light romkatv/powerlevel10k
+
+# =============================================================================
+# 4. Aliases
+# =============================================================================
+
+# -- Editor Aliases --
+alias vi="nvim"
+alias vim="nvim"
+alias view="nvim -R"
+alias vimdiff="nvim -d"
+
+# -- 'ls' replacement with 'eza' --
+alias ls='eza --icons'              # ls with icons
+alias ll='eza -l --git --icons'     # long format, with git status and icons
+alias l='eza -l --git --icons'      # same as ll
+alias la='eza -a --icons'             # show all files (including hidden) with icons
+alias tree='eza --tree --icons'       # directory tree view with icons
+
+# =============================================================================
+# 5. Powerlevel10k Configuration File (must be at the end)
+# =============================================================================
+# Sources your personal Powerlevel10k settings from ~/.p10k.zsh.
+# To reconfigure, run `p10k configure`.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# =============================================================================
+# 6. Load Custom Scripts and Functions
+# =============================================================================
+
+# Load uv workflow extensions
+source "$HOME/.config/zsh/functions/uv_workflow.zsh"
+
+# You can add more custom scripts here in the future
+# source "$HOME/.config/zsh/functions/another_script.zsh"
