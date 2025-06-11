@@ -42,7 +42,14 @@ zinit light zsh-users/zsh-autosuggestions
 zinit light zdharma-continuum/history-search-multi-word
 
 # -- Completions --
-# Additional completions for many common tools (e.g., tmux, docker)
+# This is the critical change.
+# The 'atload' ice ensures that the commands inside the string are executed
+# ONLY AFTER zsh-completions has been successfully loaded.
+zinit ice atload"
+    autoload -U compinit && compinit
+    setopt complete_aliases
+    source '$HOME/.config/zsh/functions/uv_workflow.zsh'
+"
 zinit light zsh-users/zsh-completions
 
 # -- Utility & Framework Plugins --
@@ -56,6 +63,9 @@ zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh
 zinit ice depth"1"
 zinit light romkatv/powerlevel10k
 
+# -- Zoxide (smarter cd command) --
+eval "$(zoxide init zsh)"
+
 # =============================================================================
 # 4. Aliases
 # =============================================================================
@@ -67,11 +77,11 @@ alias view="nvim -R"
 alias vimdiff="nvim -d"
 
 # -- 'ls' replacement with 'eza' --
-alias ls='eza --icons'              # ls with icons
-alias ll='eza -l --git --icons'     # long format, with git status and icons
-alias l='eza -l --git --icons'      # same as ll
-alias la='eza -a --icons'             # show all files (including hidden) with icons
-alias tree='eza --tree --icons'       # directory tree view with icons
+alias ls='eza --icons'           # ls with icons
+alias ll='eza -l --git --icons'  # long format, with git status and icons
+alias l='eza -l --git --icons'   # same as ll
+alias la='eza -a --icons'        # show all files (including hidden) with icons
+alias tree='eza --tree --icons'  # directory tree view with icons
 
 # =============================================================================
 # 5. Powerlevel10k Configuration File (must be at the end)
@@ -79,13 +89,3 @@ alias tree='eza --tree --icons'       # directory tree view with icons
 # Sources your personal Powerlevel10k settings from ~/.p10k.zsh.
 # To reconfigure, run `p10k configure`.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-# =============================================================================
-# 6. Load Custom Scripts and Functions
-# =============================================================================
-
-# Load uv workflow extensions
-source "$HOME/.config/zsh/functions/uv_workflow.zsh"
-
-# You can add more custom scripts here in the future
-# source "$HOME/.config/zsh/functions/another_script.zsh"
