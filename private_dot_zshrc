@@ -1,30 +1,65 @@
 # =============================================================================
-# 1. Powerlevel10k Instant Prompt (must be at the very top)
+# 01. ENVIRONMENT & PATHS
 # =============================================================================
-# This block enables Powerlevel10k's instant prompt feature for a fast shell startup.
+# Set and export environment variables and modify the PATH here.
+# This ensures they are available for the entire shell session.
+
+# -- ASDF Version Manager --
+# ASDF needs its data directory defined and its shims/binaries in the PATH.
+if [[ "$(uname)" == "Linux" ]]; then
+  export ASDF_DATA_DIR="$HOME/.asdf"
+  export PATH="$ASDF_DATA_DIR/bin:$ASDF_DATA_DIR/shims:$PATH"
+fi
+
+# =============================================================================
+# 02. SHELL HISTORY CONFIGURATION
+# =============================================================================
+# Configures how command history is stored and shared.
+
+# Location of the history file.
+HISTFILE=~/.zsh_history
+# Number of lines of history to keep in memory.
+HISTSIZE=10000
+# Number of lines of history to save to the history file.
+SAVEHIST=10000
+
+# Set options for history management.
+setopt HIST_IGNORE_DUPS     # Don't record an event if it's a duplicate of the previous one.
+setopt HIST_REDUCE_BLANKS   # Remove superfluous blanks from history entries.
+setopt INC_APPEND_HISTORY   # Append commands to the history file immediately, not just on shell exit.
+setopt SHARE_HISTORY        # Share history between all active shell sessions.
+
+# =============================================================================
+# 03. ZINIT PLUGIN MANAGER
+# =============================================================================
+# This section installs and initializes the Zinit plugin manager.
+# Powerlevel10k's instant prompt is sourced here as part of Zinit's setup.
+
+# -- Powerlevel10k Instant Prompt --
+# This must be sourced before Zinit to enable a fast shell startup.
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-# =============================================================================
-# 2. Zinit Plugin Manager (Installer & Initialization)
-# =============================================================================
-# This block ensures Zinit is installed if it's missing.
+# -- Zinit Installation --
+# Ensures Zinit is installed if it's missing.
 if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
     print -P "%F{33} %F{220}Installing Zinit Plugin Manager...%f"
     command mkdir -p "$HOME/.local/share/zinit" && command chmod g-rwX "$HOME/.local/share/zinit"
     command git clone https://github.com/zdharma-continuum/zinit "$HOME/.local/share/zinit/zinit.git" && \
-        print -P "%F{33} %F{34}Installation successful.%f%b" || \
-        print -P "%F{160} The clone has failed.%f%b"
+        print -P "%F{34}Installation successful.%f%b" || \
+        print -P "%F{160}The clone has failed.%f%b"
 fi
 
+# -- Zinit Initialization --
 source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
 autoload -Uz _zinit
 (( ${+_comps} )) && _comps[zinit]=_zinit
 
 # =============================================================================
-# 3. Zinit Plugin & Theme Loading
+# 04. ZINIT PLUGINS & THEME
 # =============================================================================
+# All plugins and the theme are loaded here using Zinit.
 
 # -- Zinit Annexes (for extended functionality) --
 zinit light-mode for \
@@ -34,38 +69,31 @@ zinit light-mode for \
     zdharma-continuum/zinit-annex-rust
 
 # -- Core Shell Functionality --
-# Syntax highlighting (must be loaded before autosuggestions)
-zinit light zdharma-continuum/fast-syntax-highlighting
-# Command auto-suggestions based on history
-zinit light zsh-users/zsh-autosuggestions
-# Multi-word history search
-zinit light zdharma-continuum/history-search-multi-word
+zinit light zdharma-continuum/fast-syntax-highlighting      # Syntax highlighting
+zinit light zsh-users/zsh-autosuggestions                   # Command auto-suggestions
+zinit light zdharma-continuum/history-search-multi-word     # Multi-word history search
+zinit light zsh-users/zsh-history-substring-search          # Enables history search with arrow keys
 
 # -- Completions --
-# This is the critical change.
-# The 'atload' ice ensures that the commands inside the string are executed
-# ONLY AFTER zsh-completions has been successfully loaded.
+# Loads zsh-completions and initializes the completion system afterwards.
 zinit ice atload"
     autoload -U compinit && compinit
     setopt complete_aliases
-    source '$HOME/.config/zsh/functions/uv_workflow.zsh'
 "
 zinit light zsh-users/zsh-completions
 
-# -- Utility & Framework Plugins --
-# Provides convenient git aliases (e.g., gco, gaa, gl)
-zinit snippet OMZ::plugins/git/git.plugin.zsh
-# Provides completions for asdf version manager
-zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh
+# -- Utility & Framework Plugins (from Oh My Zsh) --
+zinit snippet OMZ::plugins/git/git.plugin.zsh              # Git aliases and functions
+zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh            # Completions for asdf
 
 # -- Theme --
-# Powerlevel10k theme with optimized 'git clone'
 zinit ice depth"1"
 zinit light romkatv/powerlevel10k
 
 # =============================================================================
-# 4. Aliases
+# 05. ALIASES & FUNCTIONS
 # =============================================================================
+# Custom aliases and functions for a more efficient workflow.
 
 # -- Editor Aliases --
 alias vi="nvim"
@@ -74,25 +102,30 @@ alias view="nvim -R"
 alias vimdiff="nvim -d"
 
 # -- 'ls' replacement with 'eza' --
-alias ls='eza --icons'           # ls with icons
-alias ll='eza -l --git --icons'  # long format, with git status and icons
-alias l='eza -l --git --icons'   # same as ll
-alias la='eza -a --icons'        # show all files (including hidden) with icons
-alias tree='eza --tree --icons'  # directory tree view with icons
+alias ls='eza --icons'            # ls with icons
+alias ll='eza -l --git --icons'   # long format, with git status and icons
+alias l='eza -l --git --icons'    # same as ll
+alias la='eza -la --icons'        # show all files (including hidden) with icons
+alias tree='eza --tree --icons'   # directory tree view with icons
 
 # =============================================================================
-# 5. Powerlevel10k Configuration File (must be at the end)
+# 06. KEYBINDINGS
 # =============================================================================
-# Sources your personal Powerlevel10k settings from ~/.p10k.zsh.
-# To reconfigure, run `p10k configure`.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# Binds arrow keys to history search based on what you've typed.
+# This requires the 'zsh-history-substring-search' plugin loaded above.
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
 
-if [[ "$(uname)" == "Linux" ]]; then
-  export ASDF_DATA_DIR="$HOME/.asdf"
-  export PATH="$ASDF_DATA_DIR/bin:$ASDF_DATA_DIR/shims:$PATH"
-fi
+# =============================================================================
+# 07. FINAL INITIALIZATIONS
+# =============================================================================
+# Final configurations and tools that should be loaded at the end.
 
 # -- Zoxide (smarter cd command) --
+# Initializes Zoxide to track directories.
 eval "$(zoxide init zsh)"
 
-
+# -- Powerlevel10k Configuration File --
+# Sources your personal Powerlevel10k settings.
+# To reconfigure, run `p10k configure`.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
