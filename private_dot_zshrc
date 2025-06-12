@@ -89,3 +89,8 @@ alias tree='eza --tree --icons'  # directory tree view with icons
 # Sources your personal Powerlevel10k settings from ~/.p10k.zsh.
 # To reconfigure, run `p10k configure`.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+if [[ "$(uname)" == "Linux" ]]; then
+  export ASDF_DATA_DIR="$HOME/.asdf"
+  export PATH="$ASDF_DATA_DIR/bin:$ASDF_DATA_DIR/shims:$PATH"
+fi
