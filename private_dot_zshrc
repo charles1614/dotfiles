@@ -85,6 +85,7 @@ zinit light zsh-users/zsh-completions
 # -- Utility & Framework Plugins (from Oh My Zsh) --
 zinit snippet OMZ::plugins/git/git.plugin.zsh              # Git aliases and functions
 zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh            # Completions for asdf
+zinit snippet OMZ::plugins/sudo/sudo.plugin.zsh            # Adds 'Esc Esc' shortcut to prepend sudo
 
 # -- Theme --
 zinit ice depth"1"
@@ -111,21 +112,38 @@ alias tree='eza --tree --icons'   # directory tree view with icons
 # =============================================================================
 # 06. KEYBINDINGS
 # =============================================================================
-# Binds arrow keys to history search based on what you've typed.
-# This requires the 'zsh-history-substring-search' plugin loaded above.
-bindkey '^[[A' history-substring-search-up
-bindkey '^[[B' history-substring-search-down
+# A more robust way to bind arrow keys using terminfo.
+# This works across different terminals and avoids hardcoding key sequences.
+# This requires the 'zsh-history-substring-search' plugin.
+
+# Directly load the terminfo module to access its variables.
+zmodload zsh/terminfo
+
+# Bind keys using the variables provided by the terminfo module.
+bindkey "${terminfo[kcuu1]}" history-substring-search-up   # Bind Up Arrow
+bindkey "${terminfo[kcud1]}" history-substring-search-down # Bind Down Arrow
 
 # =============================================================================
 # 07. FINAL INITIALIZATIONS
 # =============================================================================
 # Final configurations and tools that should be loaded at the end.
 
+# -- The Fuck (command corrector) --
+# Corrects previous command with a user-friendly alias `please`.
+# Ensure 'thefuck' is installed (e.g., `pip3 install thefuck`).
+if command -v thefuck >/dev/null 2>&1; then
+    eval "$(thefuck --alias please)"
+fi
+
 # -- Zoxide (smarter cd command) --
 # Initializes Zoxide to track directories.
-eval "$(zoxide init zsh)"
+if command -v zoxide >/dev/null 2>&1; then
+    eval "$(zoxide init zsh)"
+fi
 
 # -- Powerlevel10k Configuration File --
 # Sources your personal Powerlevel10k settings.
 # To reconfigure, run `p10k configure`.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+eval $(thefuck --alias)
