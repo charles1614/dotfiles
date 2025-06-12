@@ -124,7 +124,17 @@ bindkey "${terminfo[kcuu1]}" history-substring-search-up   # Bind Up Arrow
 bindkey "${terminfo[kcud1]}" history-substring-search-down # Bind Down Arrow
 
 # =============================================================================
-# 07. FINAL INITIALIZATIONS
+# 07. Load Custom Scripts and Functions
+# =============================================================================
+
+# Load uv workflow extensions
+source "$HOME/.config/zsh/functions/uv_workflow.zsh"
+
+# You can add more custom scripts here in the future
+# source "$HOME/.config/zsh/functions/another_script.zsh"
+
+# =============================================================================
+# 08. FINAL INITIALIZATIONS
 # =============================================================================
 # Final configurations and tools that should be loaded at the end.
 
