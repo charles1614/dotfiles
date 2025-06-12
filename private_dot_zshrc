@@ -63,9 +63,6 @@ zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh
 zinit ice depth"1"
 zinit light romkatv/powerlevel10k
 
-# -- Zoxide (smarter cd command) --
-eval "$(zoxide init zsh)"
-
 # =============================================================================
 # 4. Aliases
 # =============================================================================
@@ -94,3 +91,8 @@ if [[ "$(uname)" == "Linux" ]]; then
   export ASDF_DATA_DIR="$HOME/.asdf"
   export PATH="$ASDF_DATA_DIR/bin:$ASDF_DATA_DIR/shims:$PATH"
 fi
+
+# -- Zoxide (smarter cd command) --
+eval "$(zoxide init zsh)"
+
+
