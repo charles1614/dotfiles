@@ -4,11 +4,19 @@
 # Set and export environment variables and modify the PATH here.
 # This ensures they are available for the entire shell session.
 
+# -- Google Cloud SDK --
+export GOOGLE_CLOUD_PROJECT="civil-charmer-441203-i9"
+
 # -- ASDF Version Manager --
 # ASDF needs its data directory defined and its shims/binaries in the PATH.
 if [[ "$(uname)" == "Linux" ]]; then
+  # Linux setup
   export ASDF_DATA_DIR="$HOME/.asdf"
   export PATH="$ASDF_DATA_DIR/bin:$ASDF_DATA_DIR/shims:$PATH"
+elif [[ "$(uname)" == "Darwin" ]]; then
+  # macOS (via Homebrew) setup
+  # The asdf.sh script handles PATH and completions.
+  source "$(brew --prefix asdf)/libexec/asdf.sh"
 fi
 
 # =============================================================================
@@ -24,10 +32,11 @@ HISTSIZE=10000
 SAVEHIST=10000
 
 # Set options for history management.
-setopt HIST_IGNORE_DUPS     # Don't record an event if it's a duplicate of the previous one.
-setopt HIST_REDUCE_BLANKS   # Remove superfluous blanks from history entries.
-setopt INC_APPEND_HISTORY   # Append commands to the history file immediately, not just on shell exit.
-setopt SHARE_HISTORY        # Share history between all active shell sessions.
+setopt HIST_IGNORE_DUPS      # Don't record an event if it's a duplicate of the previous one.
+setopt HIST_REDUCE_BLANKS    # Remove superfluous blanks from history entries.
+setopt INC_APPEND_HISTORY    # Append commands to the history file immediately, not just on shell exit.
+setopt SHARE_HISTORY         # Share history between all active shell sessions.
+setopt EXTENDED_HISTORY      # Save command timestamps and duration to history.
 
 # =============================================================================
 # 03. ZINIT PLUGIN MANAGER
@@ -83,9 +92,9 @@ zinit ice atload"
 zinit light zsh-users/zsh-completions
 
 # -- Utility & Framework Plugins (from Oh My Zsh) --
-zinit snippet OMZ::plugins/git/git.plugin.zsh              # Git aliases and functions
-zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh            # Completions for asdf
-zinit snippet OMZ::plugins/sudo/sudo.plugin.zsh            # Adds 'Esc Esc' shortcut to prepend sudo
+zinit snippet OMZ::plugins/git/git.plugin.zsh               # Git aliases and functions
+zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh             # Completions for asdf
+zinit snippet OMZ::plugins/sudo/sudo.plugin.zsh             # Adds 'Esc Esc' shortcut to prepend sudo
 
 # -- Theme --
 zinit ice depth"1"
@@ -103,7 +112,7 @@ alias view="nvim -R"
 alias vimdiff="nvim -d"
 
 # -- 'ls' replacement with 'eza' --
-alias ls='eza --icons'            # ls with icons
+alias ls='eza --icons'          # ls with icons
 alias ll='eza -l --git --icons'   # long format, with git status and icons
 alias l='eza -l --git --icons'    # same as ll
 alias la='eza -la --icons'        # show all files (including hidden) with icons
@@ -156,4 +165,3 @@ fi
 # To reconfigure, run `p10k configure`.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-eval $(thefuck --alias)
