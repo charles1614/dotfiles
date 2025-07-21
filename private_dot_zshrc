@@ -171,4 +171,3 @@ fi
 # Sources your personal Powerlevel10k settings.
 # To reconfigure, run `p10k configure`.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
