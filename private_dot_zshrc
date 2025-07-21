@@ -78,23 +78,27 @@ zinit light-mode for \
     zdharma-continuum/zinit-annex-rust
 
 # -- Core Shell Functionality --
-zinit light zdharma-continuum/fast-syntax-highlighting      # Syntax highlighting
-zinit light zsh-users/zsh-autosuggestions                   # Command auto-suggestions
-zinit light zdharma-continuum/history-search-multi-word     # Multi-word history search
-zinit light zsh-users/zsh-history-substring-search          # Enables history search with arrow keys
+zinit light zdharma-continuum/fast-syntax-highlighting       # Syntax highlighting
+zinit light zsh-users/zsh-autosuggestions                    # Command auto-suggestions
+zinit light zdharma-continuum/history-search-multi-word      # Multi-word history search
+zinit light zsh-users/zsh-history-substring-search           # Enables history search with arrow keys
 
 # -- Completions --
 # Loads zsh-completions and initializes the completion system afterwards.
-zinit ice atload"
-    autoload -U compinit && compinit
-    setopt complete_aliases
-"
+zinit ice atload'
+    # Only initialize completions in an INTERACTIVE shell.
+    # This check prevents errors during non-interactive builds (e.g., Docker).
+    if [[ "$-" == *i* ]]; then
+        autoload -U compinit && compinit
+        setopt complete_aliases
+    fi
+'
 zinit light zsh-users/zsh-completions
 
 # -- Utility & Framework Plugins (from Oh My Zsh) --
-zinit snippet OMZ::plugins/git/git.plugin.zsh               # Git aliases and functions
-zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh             # Completions for asdf
-zinit snippet OMZ::plugins/sudo/sudo.plugin.zsh             # Adds 'Esc Esc' shortcut to prepend sudo
+zinit snippet OMZ::plugins/git/git.plugin.zsh            # Git aliases and functions
+zinit snippet OMZ::plugins/asdf/asdf.plugin.zsh          # Completions for asdf
+zinit snippet OMZ::plugins/sudo/sudo.plugin.zsh          # Adds 'Esc Esc' shortcut to prepend sudo
 
 # -- Theme --
 zinit ice depth"1"
@@ -112,11 +116,11 @@ alias view="nvim -R"
 alias vimdiff="nvim -d"
 
 # -- 'ls' replacement with 'eza' --
-alias ls='eza --icons'          # ls with icons
-alias ll='eza -l --git --icons'   # long format, with git status and icons
-alias l='eza -l --git --icons'    # same as ll
-alias la='eza -la --icons'        # show all files (including hidden) with icons
-alias tree='eza --tree --icons'   # directory tree view with icons
+alias ls='eza --icons'           # ls with icons
+alias ll='eza -l --git --icons'  # long format, with git status and icons
+alias l='eza -l --git --icons'   # same as ll
+alias la='eza -la --icons'       # show all files (including hidden) with icons
+alias tree='eza --tree --icons'  # directory tree view with icons
 
 # =============================================================================
 # 06. KEYBINDINGS
@@ -137,7 +141,10 @@ bindkey "${terminfo[kcud1]}" history-substring-search-down # Bind Down Arrow
 # =============================================================================
 
 # Load uv workflow extensions
-source "$HOME/.config/zsh/functions/uv_workflow.zsh"
+# Ensure the function file exists before trying to source it
+if [[ -f "$HOME/.config/zsh/functions/uv_workflow.zsh" ]]; then
+    source "$HOME/.config/zsh/functions/uv_workflow.zsh"
+fi
 
 # You can add more custom scripts here in the future
 # source "$HOME/.config/zsh/functions/another_script.zsh"
@@ -164,5 +171,4 @@ fi
 # Sources your personal Powerlevel10k settings.
 # To reconfigure, run `p10k configure`.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
 
