@@ -171,3 +171,10 @@ fi
 # Sources your personal Powerlevel10k settings.
 # To reconfigure, run `p10k configure`.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# -- Direnv (automatic environment loader) --
+# Initializes direnv to automatically load/unload .envrc files.
+# This should be placed near the end of the file.
+if command -v direnv >/dev/null 2>&1; then
+  eval "$(direnv hook zsh)"
+fi
