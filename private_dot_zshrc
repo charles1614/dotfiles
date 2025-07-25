@@ -122,6 +122,14 @@ alias l='eza -l --git --icons'   # same as ll
 alias la='eza -la --icons'       # show all files (including hidden) with icons
 alias tree='eza --tree --icons'  # directory tree view with icons
 
+# -- terminal multipler --
+# Zellij Aliases (using "zj")
+alias zj='zellij'
+alias zjs='zellij -s'
+alias zja='zellij attach'
+alias zjl='zellij ls'
+alias zjk='zellij kill-all-sessions'
+
 # =============================================================================
 # 06. KEYBINDINGS
 # =============================================================================
@@ -178,3 +186,5 @@ fi
 if command -v direnv >/dev/null 2>&1; then
   eval "$(direnv hook zsh)"
 fi
+
+eval $(thefuck --alias)
