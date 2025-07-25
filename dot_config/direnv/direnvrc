@@ -1,0 +1,21 @@
+# Defines a direnv layout for use with uv
+layout_python-uv() {
+  # Check if uv is installed
+  if ! command -v uv &>/dev/null; then
+    log_error "uv is not installed. Please run: pip install uv"
+    exit 1
+  fi
+
+  # Use .venv as the default virtual environment directory
+  local VENV_DIR=${VENV_DIR:-.venv}
+
+  # Create the virtual environment if it doesn't exist
+  if [[ ! -d "$VENV_DIR" ]]; then
+    log_status "Creating virtual environment with uv..."
+    uv venv "$VENV_DIR" -p python3
+  fi
+
+  # Set the VIRTUAL_ENV environment variable and prepend to PATH
+  export VIRTUAL_ENV=$(realpath "$VENV_DIR")
+  PATH_add "$VIRTUAL_ENV/bin"
+}
