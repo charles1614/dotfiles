@@ -29,6 +29,20 @@ setup_system_dependencies() {
     info "Stage 1: Setting up base system dependencies via APT..."
     if [ -f /etc/os-release ]; then . /etc/os-release; else error "Cannot determine Ubuntu version."; fi
 
+    # Detect architecture to determine appropriate mirror
+    local arch
+    case "$(uname -m)" in
+        x86_64) arch="x86_64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        armv7l) arch="armhf" ;;
+        ppc64el) arch="ppc64el" ;;
+        riscv64) arch="riscv64" ;;
+        s390x) arch="s390x" ;;
+        *) error "Unsupported architecture: $(uname -m)" ;;
+    esac
+
+    info "Detected architecture: $arch"
+
     DEFAULT_SOURCES_FILE="/etc/apt/sources.list.d/ubuntu.sources"
     if [ -f "$DEFAULT_SOURCES_FILE" ]; then
         info "Disabling default .sources format to enforce custom sources.list..."
@@ -38,12 +52,21 @@ setup_system_dependencies() {
 EOF
     fi
 
-    info "Configuring APT to use Tsinghua University mirror..."
+    # Choose appropriate mirror based on architecture
+    local mirror_base
+    if [ "$arch" = "x86_64" ]; then
+        info "Configuring APT to use Tsinghua University mirror (x86_64)..."
+        mirror_base="https://mirrors.tuna.tsinghua.edu.cn/ubuntu"
+    else
+        info "Configuring APT to use Tsinghua University Ubuntu Ports mirror ($arch)..."
+        mirror_base="https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports"
+    fi
+
     $SUDO tee /etc/apt/sources.list > /dev/null <<EOF
-deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ ${VERSION_CODENAME} main restricted universe multiverse
-deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ ${VERSION_CODENAME}-updates main restricted universe multiverse
-deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ ${VERSION_CODENAME}-backports main restricted universe multiverse
-deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ ${VERSION_CODENAME}-security main restricted universe multiverse
+deb ${mirror_base}/ ${VERSION_CODENAME} main restricted universe multiverse
+deb ${mirror_base}/ ${VERSION_CODENAME}-updates main restricted universe multiverse
+deb ${mirror_base}/ ${VERSION_CODENAME}-backports main restricted universe multiverse
+deb ${mirror_base}/ ${VERSION_CODENAME}-security main restricted universe multiverse
 EOF
 
     info "Updating package lists from mirror..."
@@ -300,10 +323,31 @@ main() {
         export DEBIAN_FRONTEND=noninteractive
         rm -f /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources
         if [ -f /etc/os-release ]; then . /etc/os-release; else error "Bootstrap failed: Cannot determine Ubuntu version."; fi
+        
+        # Detect architecture for bootstrap mirror selection
+        local arch
+        case "$(uname -m)" in
+            x86_64) arch="x86_64" ;;
+            aarch64|arm64) arch="arm64" ;;
+            armv7l) arch="armhf" ;;
+            ppc64el) arch="ppc64el" ;;
+            riscv64) arch="riscv64" ;;
+            s390x) arch="s390x" ;;
+            *) error "Unsupported architecture: $(uname -m)" ;;
+        esac
+        
+        # Choose appropriate mirror based on architecture
+        local mirror_base
+        if [ "$arch" = "x86_64" ]; then
+            mirror_base="http://archive.ubuntu.com/ubuntu"
+        else
+            mirror_base="http://ports.ubuntu.com/ubuntu-ports"
+        fi
+        
         tee /etc/apt/sources.list > /dev/null <<EOF
-deb http://archive.ubuntu.com/ubuntu/ ${VERSION_CODENAME} main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu/ ${VERSION_CODENAME}-updates main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu/ ${VERSION_CODENAME}-security main restricted universe multiverse
+deb ${mirror_base}/ ${VERSION_CODENAME} main restricted universe multiverse
+deb ${mirror_base}/ ${VERSION_CODENAME}-updates main restricted universe multiverse
+deb ${mirror_base}/ ${VERSION_CODENAME}-security main restricted universe multiverse
 EOF
         apt-get update -qq
         apt-get install -y -qq sudo curl git
