@@ -357,7 +357,7 @@ EOF
 
     mini_plugins=("python" "chezmoi" "eza" "neovim" "uv" "zellij")
     full_plugins=("zoxide" "lazygit" "ctop")
-    extra_plugins=("dust" "nodejs")
+    extra_plugins=("dust" "nodejs" "golang")
 
     declare -a plugins_to_install
     case "$PROFILE" in
