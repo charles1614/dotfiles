@@ -364,12 +364,12 @@ deb ${mirror_base}/ ${VERSION_CODENAME}-updates main restricted universe multive
 deb ${mirror_base}/ ${VERSION_CODENAME}-security main restricted universe multiverse
 EOF
         apt-get update -qq
-        apt-get install -y -qq sudo curl git
+        apt-get install -y -qq sudo curl git liblzma-dev
     fi
 
     if ! ( [ -f /etc/os-release ] && grep -q "ID=ubuntu" /etc/os-release ); then error "This script is designed for Ubuntu systems only."; fi
 
-    mini_plugins=("python" "chezmoi" "eza" "neovim" "uv" "zellij" "fzf")
+    mini_plugins=("python" "chezmoi" "rust" "eza" "neovim" "uv" "zellij" "fzf")
     full_plugins=("zoxide" "lazygit" "ctop")
     extra_plugins=("dust" "nodejs" "golang")
 
