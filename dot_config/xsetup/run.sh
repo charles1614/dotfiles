@@ -226,7 +226,21 @@ echo "--- Installing asdf plugins: $@"
 for plugin in "$@"; do
     echo "--- Processing plugin: ${plugin} ---"
     if ! asdf plugin list | grep -q "^${plugin}$"; then
-        asdf plugin add "${plugin}"
+        # Use custom repository URLs for specific plugins
+        case "${plugin}" in
+            eza)
+                asdf plugin add "${plugin}" https://github.com/pauloedurezende/asdf-eza.git
+                ;;
+            zoxide)
+                asdf plugin add "${plugin}" https://github.com/pauloedurezende/asdf-zoxide.git
+                ;;
+            fzf)
+                asdf plugin add "${plugin}" https://github.com/pauloedurezende/asdf-fzf.git
+                ;;
+            *)
+                asdf plugin add "${plugin}"
+                ;;
+        esac
     else
         echo "Plugin '${plugin}' already exists."
     fi
@@ -355,7 +369,7 @@ EOF
 
     if ! ( [ -f /etc/os-release ] && grep -q "ID=ubuntu" /etc/os-release ); then error "This script is designed for Ubuntu systems only."; fi
 
-    mini_plugins=("python" "chezmoi" "eza" "neovim" "uv" "zellij")
+    mini_plugins=("python" "chezmoi" "eza" "neovim" "uv" "zellij" "fzf")
     full_plugins=("zoxide" "lazygit" "ctop")
     extra_plugins=("dust" "nodejs" "golang")
 
