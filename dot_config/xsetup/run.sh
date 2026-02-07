@@ -244,10 +244,21 @@ for plugin in "$@"; do
     else
         echo "Plugin '${plugin}' already exists."
     fi
-    echo "--- Installing latest version of ${plugin}... ---"
-    asdf install "${plugin}" latest
-    echo "--- Setting global version for ${plugin}... ---"
-    asdf set -u "${plugin}" latest
+
+    # Special handling for Python: install both latest and 3.10
+    if [ "${plugin}" == "python" ]; then
+        echo "--- Installing Python 3.10... ---"
+        asdf install python 3.10
+        echo "--- Installing latest version of Python... ---"
+        asdf install python latest
+        echo "--- Setting global version to latest (with 3.10 as fallback)... ---"
+        asdf global python latest 3.10
+    else
+        echo "--- Installing latest version of ${plugin}... ---"
+        asdf install "${plugin}" latest
+        echo "--- Setting global version for ${plugin}... ---"
+        asdf set -u "${plugin}" latest
+    fi
 done
 
 # Special post-install handling for opencommit
@@ -369,7 +380,7 @@ EOF
 
     if ! ( [ -f /etc/os-release ] && grep -q "ID=ubuntu" /etc/os-release ); then error "This script is designed for Ubuntu systems only."; fi
 
-    mini_plugins=("python" "chezmoi" "rust" "eza" "neovim" "uv" "zellij" "fzf")
+    mini_plugins=("python" "chezmoi" "rust" "eza" "neovim" "uv" "zellij" "fzf" "llvm")
     full_plugins=("zoxide" "lazygit" "ctop")
     extra_plugins=("dust" "nodejs" "golang")
 
