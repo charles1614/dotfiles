@@ -381,8 +381,8 @@ EOF
     if ! ( [ -f /etc/os-release ] && grep -q "ID=ubuntu" /etc/os-release ); then error "This script is designed for Ubuntu systems only."; fi
 
     mini_plugins=("python" "chezmoi" "neovim" "uv" "zellij" "fzf" "zoxide")
-    full_plugins=("eza" "lazygit")
-    extra_plugins=("ctop" "dust" "nodejs" "golang" "llvm" "rust")
+    full_plugins=("rust" "eza" "lazygit")
+    extra_plugins=("ctop" "dust" "nodejs" "golang" "llvm")
 
     declare -a plugins_to_install
     case "$PROFILE" in
