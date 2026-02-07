@@ -245,14 +245,14 @@ for plugin in "$@"; do
         echo "Plugin '${plugin}' already exists."
     fi
 
-    # Special handling for Python: install both latest and 3.10
+    # Special handling for Python: install both latest and 3.10.15
     if [ "${plugin}" == "python" ]; then
-        echo "--- Installing Python 3.10... ---"
-        asdf install python 3.10
+        echo "--- Installing Python 3.10.15... ---"
+        asdf install python 3.10.15
         echo "--- Installing latest version of Python... ---"
         asdf install python latest
-        echo "--- Setting global version to latest (with 3.10 as fallback)... ---"
-        asdf global python latest 3.10
+        echo "--- Setting global version to latest (with 3.10.15 as fallback)... ---"
+        asdf global python latest 3.10.15
     else
         echo "--- Installing latest version of ${plugin}... ---"
         asdf install "${plugin}" latest
