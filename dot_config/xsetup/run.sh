@@ -75,7 +75,7 @@ EOF
     info "Installing OS-level packages and build dependencies for asdf..."
     $SUDO apt-get install -y --no-install-recommends \
         build-essential git curl unzip jq \
-        libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncurses5-dev libffi-dev \
+        libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncurses5-dev libffi-dev liblzma-dev \
         zsh bat ripgrep fd-find
 
     $SUDO ln -sf /usr/bin/fdfind /usr/local/bin/fd
@@ -252,7 +252,7 @@ for plugin in "$@"; do
         echo "--- Installing latest version of Python... ---"
         asdf install python latest
         echo "--- Setting global version to latest (with 3.10.15 as fallback)... ---"
-        asdf global python latest 3.10.15
+        asdf set -u python latest 3.10.15
     else
         echo "--- Installing latest version of ${plugin}... ---"
         asdf install "${plugin}" latest
