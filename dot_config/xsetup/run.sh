@@ -237,6 +237,9 @@ for plugin in "$@"; do
             fzf)
                 asdf plugin add "${plugin}" https://github.com/pauloedurezende/asdf-fzf.git
                 ;;
+            clang)
+                asdf plugin add "${plugin}" https://github.com/higebu/asdf-llvm.git
+                ;;
             *)
                 asdf plugin add "${plugin}"
                 ;;
@@ -382,7 +385,7 @@ EOF
 
     mini_plugins=("python" "chezmoi" "neovim" "uv" "zellij" "fzf" "zoxide")
     full_plugins=("rust" "eza" "lazygit")
-    extra_plugins=("ctop" "dust" "nodejs" "golang" "llvm")
+    extra_plugins=("ctop" "dust" "nodejs" "golang" "clang")
 
     declare -a plugins_to_install
     case "$PROFILE" in
