@@ -404,11 +404,11 @@ EOF
     install_mise
     install_mise_tools "$PROFILE"
 
+    configure_tools "$PROFILE"
+
     if [ -n "$CHEZMOI_REPO" ]; then
         apply_chezmoi_dotfiles "$CHEZMOI_REPO"
     fi
-
-    configure_tools "$PROFILE"
 
     if [ "$SET_ZSH_DEFAULT" = true ]; then
         set_default_shell
