@@ -10,7 +10,7 @@
 # Tools managed by mise (profile-based):
 #   mini:  Python, uv, Neovim, fzf, zoxide, chezmoi, zellij, starship, jq, ripgrep, fd
 #   full:  mini + Node.js, Go, Rust, eza, lazygit, delta, bat
-#   extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM/Clang (via apt.llvm.org)
+#   extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM/Clang (via mise-plugins/mise-llvm)
 # ==============================================================================
 
 set -e
@@ -87,7 +87,7 @@ EOF
 
     info "Installing minimal OS-level packages and build dependencies..."
     $SUDO apt-get install -y --no-install-recommends \
-        build-essential git curl wget unzip zsh lsb-release software-properties-common gnupg \
+        build-essential git curl wget unzip zsh \
         libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
         libsqlite3-dev libncurses5-dev libffi-dev liblzma-dev
 }
@@ -96,7 +96,8 @@ install_profile_apt_packages() {
     local profile=$1
     if [[ "$profile" == "extra" ]]; then
         info "Installing APT dependencies for 'extra' profile..."
-        $SUDO apt-get install -y --no-install-recommends ffmpegthumbnailer
+        $SUDO apt-get install -y --no-install-recommends \
+            ffmpegthumbnailer cmake ninja-build python3
     fi
 }
 
@@ -174,6 +175,7 @@ install_mise_tools() {
         tools+=("aqua:dalance/procs@latest")
         tools+=("xh@latest")
         tools+=("gping@latest")
+        tools+=("llvm@latest")
     fi
 
     info "Tools to install: ${tools[*]}"
@@ -201,11 +203,31 @@ if ! command -v mise > /dev/null; then
     exit 1
 fi
 
-echo "--- Installing tools via mise ---"
-mise use -g -y "${TOOLS[@]}"
+# For extra profile, register the LLVM plugin (requires custom plugin URL)
+if [[ "$PROFILE" == "extra" ]]; then
+    echo "--- Adding mise-llvm plugin ---"
+    mise plugin add llvm https://github.com/mise-plugins/mise-llvm.git 2>/dev/null || true
 
-echo "--- All mise tools installed successfully ---"
-mise reshim
+    # LLVM compilation needs Python on PATH. Install non-LLVM tools first,
+    # activate mise so Python shims are available, then install LLVM.
+    NON_LLVM=()
+    for t in "${TOOLS[@]}"; do
+        [[ "$t" != llvm@* ]] && NON_LLVM+=("$t")
+    done
+
+    echo "--- Installing tools via mise (phase 1: non-LLVM) ---"
+    mise use -g -y "${NON_LLVM[@]}"
+    mise reshim
+    eval "$(mise activate bash)"
+
+    echo "--- Installing LLVM via mise (phase 2: requires Python) ---"
+    mise use -g -y llvm@latest
+    mise reshim
+else
+    echo "--- Installing tools via mise ---"
+    mise use -g -y "${TOOLS[@]}"
+    mise reshim
+fi
 
 # Post-install tasks (require mise activation for shims)
 eval "$(mise activate bash)"
@@ -228,22 +250,6 @@ fi
 MISE_EOF
 
     success "mise tool installation complete for '$profile' profile."
-}
-
-install_llvm() {
-    info "Stage 4: Installing LLVM/Clang via apt.llvm.org..."
-
-    # The official llvm.sh handles repo setup, GPG key import, and package installation
-    # When no version is specified, it installs the latest stable release
-    local llvm_script="/tmp/llvm-install-$$.sh"
-    curl -fsSL https://apt.llvm.org/llvm.sh -o "$llvm_script"
-    chmod +x "$llvm_script"
-
-    # Install LLVM with all sub-packages (clang, lldb, lld, clangd, etc.)
-    $SUDO "$llvm_script" all
-
-    rm -f "$llvm_script"
-    success "LLVM installed successfully."
 }
 
 configure_tools() {
@@ -356,11 +362,6 @@ EOF
     install_profile_apt_packages "$PROFILE"
     install_mise
     install_mise_tools "$PROFILE"
-
-    if [[ "$PROFILE" == "extra" ]]; then
-        install_llvm
-    fi
-
     configure_tools "$PROFILE"
 
     if [ "$SET_ZSH_DEFAULT" = true ]; then
