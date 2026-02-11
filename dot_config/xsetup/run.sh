@@ -10,7 +10,7 @@
 # Tools managed by mise (profile-based):
 #   mini:  Python, uv, Neovim, fzf, zoxide, chezmoi, zellij, starship, jq, ripgrep, fd
 #   full:  mini + Node.js, Go, Rust, eza, lazygit, delta, bat
-#   extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM/Clang
+#   extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM/Clang (via apt.llvm.org)
 # ==============================================================================
 
 set -e
@@ -96,8 +96,7 @@ install_profile_apt_packages() {
     local profile=$1
     if [[ "$profile" == "extra" ]]; then
         info "Installing APT dependencies for 'extra' profile..."
-        $SUDO apt-get install -y --no-install-recommends \
-            ffmpegthumbnailer cmake ninja-build python3
+        $SUDO apt-get install -y --no-install-recommends ffmpegthumbnailer
     fi
 }
 
@@ -173,10 +172,8 @@ install_mise_tools() {
         tools+=("yazi@latest")
         tools+=("btop@latest")
         tools+=("aqua:dalance/procs@latest")
-        tools+=("aqua:dbrgn/tealdeer@latest")
         tools+=("xh@latest")
         tools+=("gping@latest")
-        tools+=("llvm@latest")
     fi
 
     info "Tools to install: ${tools[*]}"
@@ -204,30 +201,49 @@ if ! command -v mise > /dev/null; then
     exit 1
 fi
 
-# Add LLVM plugin if extra profile (requires custom plugin URL)
-if [[ "$PROFILE" == "extra" ]]; then
-    echo "--- Adding mise-llvm plugin ---"
-    mise plugin add llvm https://github.com/mise-plugins/mise-llvm.git 2>/dev/null || true
-fi
-
 echo "--- Installing tools via mise ---"
 mise use -g -y "${TOOLS[@]}"
 
 echo "--- All mise tools installed successfully ---"
 mise reshim
 
-# Post-install: opencommit via npm (requires Node.js)
+# Post-install tasks (require mise activation for shims)
+eval "$(mise activate bash)"
+
 if [[ "$PROFILE" == "full" || "$PROFILE" == "extra" ]]; then
+    # opencommit via npm (requires Node.js)
     if command -v node > /dev/null 2>&1; then
         echo "--- Installing opencommit via npm ---"
-        eval "$(mise activate bash)"
         npm install -g opencommit
+        mise reshim
+    fi
+
+    # tealdeer via cargo (requires Rust; no pre-built binary in mise registry)
+    if command -v cargo > /dev/null 2>&1; then
+        echo "--- Installing tealdeer via cargo ---"
+        cargo install tealdeer
         mise reshim
     fi
 fi
 MISE_EOF
 
     success "mise tool installation complete for '$profile' profile."
+}
+
+install_llvm() {
+    info "Stage 4: Installing LLVM/Clang via apt.llvm.org..."
+
+    # The official llvm.sh handles repo setup, GPG key import, and package installation
+    # When no version is specified, it installs the latest stable release
+    local llvm_script="/tmp/llvm-install-$$.sh"
+    curl -fsSL https://apt.llvm.org/llvm.sh -o "$llvm_script"
+    chmod +x "$llvm_script"
+
+    # Install LLVM with all sub-packages (clang, lldb, lld, clangd, etc.)
+    $SUDO "$llvm_script" all
+
+    rm -f "$llvm_script"
+    success "LLVM installed successfully."
 }
 
 configure_tools() {
@@ -340,6 +356,11 @@ EOF
     install_profile_apt_packages "$PROFILE"
     install_mise
     install_mise_tools "$PROFILE"
+
+    if [[ "$PROFILE" == "extra" ]]; then
+        install_llvm
+    fi
+
     configure_tools "$PROFILE"
 
     if [ "$SET_ZSH_DEFAULT" = true ]; then
