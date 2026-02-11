@@ -34,6 +34,8 @@ display_help() {
     echo "                                   starship, jq, ripgrep, fd."
     echo "                          - full:  mini + Node.js, Go, Rust, eza, lazygit, delta, bat."
     echo "                          - extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM."
+    echo "  --chezmoi <url>       Initialize and apply dotfiles from a chezmoi repo."
+    echo "                          Example: --chezmoi https://github.com/user/dotfiles.git"
     echo "  --set-zsh-default     Set Zsh as the default login shell for the user."
     echo "  --help                Display this help message."
 }
@@ -274,6 +276,39 @@ configure_tools() {
     fi
 }
 
+apply_chezmoi_dotfiles() {
+    local repo_url=$1
+    local user_name="${SUDO_USER:-$(whoami)}"
+
+    info "Applying dotfiles from chezmoi repo: $repo_url"
+
+    local run_as
+    if [ "$(whoami)" == "$user_name" ]; then
+        run_as="bash -s --"
+    else
+        run_as="sudo -iu $user_name -- bash -s --"
+    fi
+
+    $run_as "$repo_url" <<'CHEZMOI_EOF'
+set -e
+REPO_URL="$1"
+export PATH="$HOME/.local/bin:$PATH"
+
+if ! command -v chezmoi > /dev/null; then
+    echo "Error: chezmoi not found. PATH=$PATH" >&2
+    exit 1
+fi
+
+eval "$(mise activate bash 2>/dev/null)" || true
+
+echo "--- Running chezmoi init --apply ---"
+chezmoi init --apply "$REPO_URL"
+echo "--- chezmoi dotfiles applied ---"
+CHEZMOI_EOF
+
+    success "Dotfiles applied from $repo_url"
+}
+
 set_default_shell() {
     local target_user="${SUDO_USER:-$(whoami)}"
     info "Setting default shell to Zsh for user '$target_user'..."
@@ -301,6 +336,7 @@ cleanup() {
 main() {
     PROFILE="mini"
     SET_ZSH_DEFAULT=false
+    CHEZMOI_REPO=""
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
@@ -309,6 +345,11 @@ main() {
                     error "Invalid profile '$2'. Must be: mini, full, extra"
                 fi
                 PROFILE="$2"; shift 2 ;;
+            --chezmoi)
+                if [ -z "$2" ]; then
+                    error "--chezmoi requires a repository URL."
+                fi
+                CHEZMOI_REPO="$2"; shift 2 ;;
             --set-zsh-default) SET_ZSH_DEFAULT=true; shift 1 ;;
             --help) display_help; exit 0 ;;
             *) error "Unknown option: $1" ;;
@@ -362,6 +403,11 @@ EOF
     install_profile_apt_packages "$PROFILE"
     install_mise
     install_mise_tools "$PROFILE"
+
+    if [ -n "$CHEZMOI_REPO" ]; then
+        apply_chezmoi_dotfiles "$CHEZMOI_REPO"
+    fi
+
     configure_tools "$PROFILE"
 
     if [ "$SET_ZSH_DEFAULT" = true ]; then
