@@ -87,7 +87,7 @@ EOF
 
     info "Installing minimal OS-level packages and build dependencies..."
     $SUDO apt-get install -y --no-install-recommends \
-        build-essential git curl wget unzip zsh \
+        build-essential git curl wget unzip zsh lsb-release software-properties-common gnupg \
         libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
         libsqlite3-dev libncurses5-dev libffi-dev liblzma-dev
 }
