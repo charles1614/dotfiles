@@ -175,7 +175,7 @@ install_mise_tools() {
         tools+=("aqua:dalance/procs@latest")
         tools+=("xh@latest")
         tools+=("gping@latest")
-        tools+=("llvm@latest")
+        tools+=("clang@latest")
     fi
 
     info "Tools to install: ${tools[*]}"
@@ -206,13 +206,13 @@ fi
 # For extra profile, register the LLVM plugin (requires custom plugin URL)
 if [[ "$PROFILE" == "extra" ]]; then
     echo "--- Adding mise-llvm plugin ---"
-    mise plugin add llvm https://github.com/mise-plugins/mise-llvm.git 2>/dev/null || true
+    mise plugin add clang https://github.com/mise-plugins/mise-llvm.git 2>/dev/null || true
 
     # LLVM compilation needs Python on PATH. Install non-LLVM tools first,
-    # activate mise so Python shims are available, then install LLVM.
+    # activate mise so Python shims are available, then install clang/LLVM.
     NON_LLVM=()
     for t in "${TOOLS[@]}"; do
-        [[ "$t" != llvm@* ]] && NON_LLVM+=("$t")
+        [[ "$t" != clang@* ]] && NON_LLVM+=("$t")
     done
 
     echo "--- Installing tools via mise (phase 1: non-LLVM) ---"
@@ -220,8 +220,8 @@ if [[ "$PROFILE" == "extra" ]]; then
     mise reshim
     eval "$(mise activate bash)"
 
-    echo "--- Installing LLVM via mise (phase 2: requires Python) ---"
-    mise use -g -y llvm@latest
+    echo "--- Installing clang/LLVM via mise (phase 2: requires Python) ---"
+    mise use -g -y clang@latest
     mise reshim
 else
     echo "--- Installing tools via mise ---"
