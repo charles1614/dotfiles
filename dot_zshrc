@@ -1,0 +1,135 @@
+# =============================================================================
+# 00. Core Environment (must load first)
+# =============================================================================
+export PATH="$HOME/.local/bin:$PATH"
+
+# Homebrew (macOS only)
+if [[ "$OSTYPE" == darwin* ]]; then
+  if [[ -x "/opt/homebrew/bin/brew" ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    export FPATH="$(/opt/homebrew/bin/brew --prefix)/share/zsh/site-functions:${FPATH}"
+  elif [[ -x "/usr/local/bin/brew" ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+    export FPATH="$(/usr/local/bin/brew --prefix)/share/zsh/site-functions:${FPATH}"
+  fi
+  [[ -d "/opt/homebrew/opt/llvm/bin" ]] && export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+fi
+
+# Mise
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+
+# =============================================================================
+# 01. Zap Plugin Manager
+# =============================================================================
+_zap_init="${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
+if [[ ! -f "$_zap_init" ]]; then
+  echo "zap not found — installing..."
+  zsh <(curl -fsSL https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1
+fi
+source "$_zap_init"
+unset _zap_init
+
+plug "zsh-users/zsh-autosuggestions"
+plug "zsh-users/zsh-syntax-highlighting"
+plug "zsh-users/zsh-history-substring-search"
+plug "Aloxaf/fzf-tab"
+
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#999999"
+
+# =============================================================================
+# 02. Completion & fzf-tab
+# =============================================================================
+autoload -Uz compinit
+compinit -u -C
+
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*:git-checkout:*' sort false
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# Smart preview: directory → list, file → content, with graceful fallbacks
+zstyle ':fzf-tab:complete:*:*' fzf-preview '
+  if [ -d "$realpath" ]; then
+    if command -v eza >/dev/null 2>&1; then
+      eza -1 --color=always --icons "$realpath"
+    else
+      ls -1 --color=always "$realpath" 2>/dev/null || ls -1 "$realpath"
+    fi
+  elif [ -f "$realpath" ]; then
+    if command -v bat >/dev/null 2>&1; then
+      bat --color=always --style=numbers --line-range=:500 "$realpath"
+    else
+      head -500 "$realpath"
+    fi
+  fi'
+
+zstyle ':fzf-tab:*' fzf-flags --height=60% --layout=reverse
+
+# =============================================================================
+# 03. Aliases & Tool Wrappers
+# =============================================================================
+alias vi="nvim"
+alias vim="nvim"
+alias lg="lazygit"
+alias zj="zellij"
+
+if command -v eza >/dev/null 2>&1; then
+  unalias ls ll la 2>/dev/null
+  function ls()   { eza --icons "$@"; }
+  function ll()   { eza -l --git --icons "$@"; }
+  function la()   { eza -la --icons "$@"; }
+  function tree() { eza --tree --icons "$@"; }
+  compdef _ls ls ll la
+else
+  alias ll="ls -l"
+  alias la="ls -la"
+fi
+
+# =============================================================================
+# 04. Tool Hooks
+# =============================================================================
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
+fi
+
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
+
+# FZF keybindings (Ctrl+R / Ctrl+T)
+if command -v fzf >/dev/null 2>&1; then
+  if fzf --zsh >/dev/null 2>&1; then
+    source <(fzf --zsh)
+  elif [[ -f /usr/share/doc/fzf/examples/key-bindings.zsh ]]; then
+    source /usr/share/doc/fzf/examples/key-bindings.zsh
+    [[ -f /usr/share/doc/fzf/examples/completion.zsh ]] && source /usr/share/doc/fzf/examples/completion.zsh
+  fi
+fi
+
+if command -v direnv >/dev/null 2>&1; then
+  eval "$(direnv hook zsh)"
+fi
+
+# =============================================================================
+# 05. History & Keybindings
+# =============================================================================
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=10000
+setopt HIST_IGNORE_DUPS
+setopt INC_APPEND_HISTORY
+setopt SHARE_HISTORY
+
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
+
+# =============================================================================
+# 06. Local Overrides (machine-specific, not tracked by chezmoi)
+# =============================================================================
+if [[ -d "$HOME/.config/zsh/functions" ]]; then
+  for _f in "$HOME/.config/zsh/functions"/*.zsh(N); do
+    source "$_f"
+  done
+  unset _f
+fi
