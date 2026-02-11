@@ -97,7 +97,7 @@ install_profile_apt_packages() {
     if [[ "$profile" == "extra" ]]; then
         info "Installing APT dependencies for 'extra' profile..."
         $SUDO apt-get install -y --no-install-recommends \
-            ffmpegthumbnailer cmake ninja-build
+            ffmpegthumbnailer cmake ninja-build python3
     fi
 }
 
@@ -172,8 +172,8 @@ install_mise_tools() {
         tools+=("dust@latest")
         tools+=("yazi@latest")
         tools+=("btop@latest")
-        tools+=("procs@latest")
-        tools+=("tealdeer@latest")
+        tools+=("aqua:dalance/procs@latest")
+        tools+=("aqua:dbrgn/tealdeer@latest")
         tools+=("xh@latest")
         tools+=("gping@latest")
         tools+=("llvm@latest")
