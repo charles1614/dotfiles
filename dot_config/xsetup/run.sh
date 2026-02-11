@@ -1,33 +1,46 @@
 #!/usr/bin/env bash
 
-# Exit immediately if a command exits with a non-zero status.
+# ==============================================================================
+# Linux (Ubuntu/Debian) Development Environment Setup
+# ==============================================================================
+# Uses mise as the sole version/tool manager. APT is only used for essential
+# build dependencies. Designed for portability across containers, VPS, and
+# bare-metal systems.
+#
+# Tools managed by mise (profile-based):
+#   mini:  Python, uv, Neovim, fzf, zoxide, chezmoi, zellij, starship, jq, ripgrep, fd
+#   full:  mini + Node.js, Go, Rust, eza, lazygit, delta, bat
+#   extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM/Clang
+# ==============================================================================
+
 set -e
 
 # --- Logging helper functions ---
 info() { echo -e "\033[34m››› $1\033[0m"; }
-success() { echo -e "\033[32m✅✅✅ $1\033[0m"; }
-error() { echo -e "\033[31m❌❌❌ $1\033[0m"; exit 1; }
+success() { echo -e "\033[32m✅ $1\033[0m"; }
+error() { echo -e "\033[31m❌ $1\033[0m"; exit 1; }
 
 # --- Functional components ---
 
 display_help() {
     echo "Usage: $0 [OPTIONS]"
     echo
-    echo "This script sets up a development environment on a fresh Ubuntu system."
+    echo "This script sets up a development environment on a fresh Ubuntu/Debian system."
+    echo "Nearly all tools are installed via mise for reproducibility across environments."
     echo
     echo "Options:"
     echo "  --profile <name>      Set the installation profile. Default is 'mini'."
-    echo "                          - mini:  Installs Essential base tools (Eza, Neovim, Zellij, etc.)."
-    echo "                          - full:  Includes 'mini' + Recommended workflow tools (AstroVim, Lazygit, Bat, etc.)."
-    echo "                          - extra: Includes 'full' + Situational/specialized tools (Yazi, Dust, etc.)."
-    echo "  --chezmoi <REPO_URL>  Restore dotfiles from a Git repository using Chezmoi after setup."
+    echo "                          - mini:  Python, uv, Neovim, fzf, zoxide, chezmoi, zellij,"
+    echo "                                   starship, jq, ripgrep, fd."
+    echo "                          - full:  mini + Node.js, Go, Rust, eza, lazygit, delta, bat."
+    echo "                          - extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM."
     echo "  --set-zsh-default     Set Zsh as the default login shell for the user."
     echo "  --help                Display this help message."
 }
 
 setup_system_dependencies() {
     info "Stage 1: Setting up base system dependencies via APT..."
-    if [ -f /etc/os-release ]; then . /etc/os-release; else error "Cannot determine Ubuntu version."; fi
+    if [ -f /etc/os-release ]; then . /etc/os-release; else error "Cannot determine OS version."; fi
 
     # Detect architecture to determine appropriate mirror
     local arch
@@ -72,37 +85,32 @@ EOF
     info "Updating package lists from mirror..."
     $SUDO apt-get update
 
-    info "Installing OS-level packages and build dependencies for asdf..."
+    info "Installing minimal OS-level packages and build dependencies..."
     $SUDO apt-get install -y --no-install-recommends \
-        build-essential git curl unzip jq \
-        libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncurses5-dev libffi-dev liblzma-dev \
-        zsh bat ripgrep fd-find
-
-    $SUDO ln -sf /usr/bin/fdfind /usr/local/bin/fd
+        build-essential git curl wget unzip zsh \
+        libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
+        libsqlite3-dev libncurses5-dev libffi-dev liblzma-dev
 }
 
-# --- Install asdf binary using GitHub API (more reliable than hardcoded URLs) ---
-install_asdf() {
+install_profile_apt_packages() {
+    local profile=$1
+    if [[ "$profile" == "extra" ]]; then
+        info "Installing APT dependencies for 'extra' profile..."
+        $SUDO apt-get install -y --no-install-recommends \
+            ffmpegthumbnailer cmake ninja-build
+    fi
+}
+
+install_mise() {
     local user_name="${SUDO_USER:-$(whoami)}"
     local user_home; user_home=$(getent passwd "$user_name" | cut -d: -f6)
+
+    info "Stage 2: Installing mise for user '$user_name'..."
+
+    # Remove old asdf installation if it exists (migration cleanup)
     local asdf_dir="$user_home/.asdf"
-
-    info "Stage 2: Installing asdf binary via GitHub API for user '$user_name'..."
-
-    # Detect architecture
-    local arch
-    case "$(uname -m)" in
-        x86_64) arch="amd64" ;;
-        aarch64|arm64) arch="arm64" ;;
-        armv7l) arch="armv7" ;;
-        *) error "Unsupported architecture: $(uname -m)" ;;
-    esac
-
-    info "Detected architecture: $arch"
-
-    # Remove old installation if it exists
     if [ -d "$asdf_dir" ]; then
-        info "Removing old asdf installation..."
+        info "Removing old asdf installation at $asdf_dir..."
         if [ "$(whoami)" == "$user_name" ]; then
             rm -rf "$asdf_dir"
         else
@@ -110,185 +118,122 @@ install_asdf() {
         fi
     fi
 
-    # Create asdf directory
+    # Install mise as the target user
     if [ "$(whoami)" == "$user_name" ]; then
-        mkdir -p "$asdf_dir/bin"
+        curl https://mise.run | sh
     else
-        sudo -u "$user_name" mkdir -p "$asdf_dir/bin"
+        sudo -iu "$user_name" -- bash -c 'curl https://mise.run | sh'
     fi
 
-    info "Fetching latest asdf release URL from GitHub API..."
-    local download_url
-    download_url=$(curl -s https://api.github.com/repos/asdf-vm/asdf/releases/latest | \
-        jq -r ".assets[] | select(.name | endswith(\".tar.gz\") and contains(\"linux-${arch}\")) | .browser_download_url")
-
-    if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
-        error "Failed to get download URL for linux-${arch}"
+    # Verify installation
+    local mise_bin="$user_home/.local/bin/mise"
+    if [ ! -f "$mise_bin" ]; then
+        error "mise binary not found at $mise_bin after installation."
     fi
 
-    info "Download URL: $download_url"
-
-    # Download and extract
-    local temp_dir="/tmp/asdf-install-$$"
-    mkdir -p "$temp_dir"
-
-    info "Downloading and extracting asdf..."
-    if ! curl -fsSL "$download_url" | tar -xz -C "$temp_dir"; then
-        rm -rf "$temp_dir"
-        error "Failed to download or extract asdf"
-    fi
-
-    # Debug: Check what was actually extracted
-    info "Checking extracted contents..."
-    ls -la "$temp_dir"
-
-    # Find the asdf binary (could be in different locations)
-    local asdf_binary=""
-    if [ -f "$temp_dir"/asdf ]; then
-        asdf_binary="$temp_dir/asdf"
-    elif [ -f "$temp_dir"/bin/asdf ]; then
-        asdf_binary="$temp_dir/bin/asdf"
-    elif [ -f "$temp_dir"/asdf*/asdf ]; then
-        asdf_binary="$temp_dir"/asdf*/asdf
-    elif [ -f "$temp_dir"/asdf*/bin/asdf ]; then
-        asdf_binary="$temp_dir"/asdf*/bin/asdf
-    else
-        info "Searching for asdf binary in extracted files..."
-        find "$temp_dir" -name "asdf" -type f | head -1 | read asdf_binary
-    fi
-
-    if [ -z "$asdf_binary" ] || [ ! -f "$asdf_binary" ]; then
-        info "Available files in temp directory:"
-        find "$temp_dir" -type f
-        rm -rf "$temp_dir"
-        error "Could not find asdf binary in extracted files"
-    fi
-
-    info "Found asdf binary at: $asdf_binary"
-
-    # Move the binary to the correct location
-    if [ "$(whoami)" == "$user_name" ]; then
-        cp "$asdf_binary" "$asdf_dir/bin/asdf"
-        chmod +x "$asdf_dir/bin/asdf"
-    else
-        sudo -u "$user_name" cp "$asdf_binary" "$asdf_dir/bin/asdf"
-        sudo -u "$user_name" chmod +x "$asdf_dir/bin/asdf"
-    fi
-
-    rm -rf "$temp_dir"
-
-    info "Configuring shell for asdf v0.16.0+ binary..."
-    local zshrc_path="$user_home/.zshrc"
-    sudo -u "$user_name" touch "$zshrc_path"
-
-    # Remove old configuration lines if they exist
-    sudo -u "$user_name" sed -i '/asdf.sh/d' "$zshrc_path"
-    sudo -u "$user_name" sed -i '/ASDF_DATA_DIR/d' "$zshrc_path"
-    sudo -u "$user_name" sed -i '/asdf.*setup/d' "$zshrc_path"
-
-    # Add v0.16.0+ configuration
-    if ! grep -q "ASDF_DATA_DIR" "$zshrc_path"; then
-        {
-            echo -e "\n# --- asdf v0.16.0+ binary setup ---"
-            echo "export ASDF_DATA_DIR=\"$asdf_dir\""
-            echo "export PATH=\"\$ASDF_DATA_DIR/bin:\$ASDF_DATA_DIR/shims:\$PATH\""
-        } | sudo -u "$user_name" tee -a "$zshrc_path" > /dev/null
-        info "asdf binary configured in $zshrc_path."
-    else
-        info "asdf already configured in $zshrc_path."
-    fi
+    info "mise installed successfully at $mise_bin"
 }
 
-install_asdf_plugins() {
+install_mise_tools() {
     local user_name="${SUDO_USER:-$(whoami)}"
     local profile=$1
-    shift
-    local plugins_to_install=("$@")
 
-    info "Stage 3: Installing '$profile' profile tools via asdf..."
-    info "Running installation command as user '$user_name'..."
+    info "Stage 3: Installing '$profile' profile tools via mise..."
 
-    # Use a heredoc to pipe the script to a new shell for robust execution
-    sudo -iu "$user_name" -- bash -s -- "${plugins_to_install[@]}" <<'EOF'
+    # Build the tool list based on profile
+    local -a tools=()
+
+    # --- mini profile tools (always included) ---
+    tools+=("python@3.10.15" "python@latest")
+    tools+=("uv@latest")
+    tools+=("neovim@latest")
+    tools+=("fzf@latest")
+    tools+=("zoxide@latest")
+    tools+=("chezmoi@latest")
+    tools+=("zellij@latest")
+    tools+=("starship@latest")
+    tools+=("jq@latest")
+    tools+=("ripgrep@latest")
+    tools+=("fd@latest")
+
+    # --- full profile tools (mini + these) ---
+    if [[ "$profile" == "full" || "$profile" == "extra" ]]; then
+        tools+=("node@latest")
+        tools+=("go@latest")
+        tools+=("rust@latest")
+        tools+=("eza@latest")
+        tools+=("lazygit@latest")
+        tools+=("delta@latest")
+        tools+=("bat@latest")
+    fi
+
+    # --- extra profile tools (full + these) ---
+    if [[ "$profile" == "extra" ]]; then
+        tools+=("dust@latest")
+        tools+=("yazi@latest")
+        tools+=("btop@latest")
+        tools+=("procs@latest")
+        tools+=("tealdeer@latest")
+        tools+=("xh@latest")
+        tools+=("gping@latest")
+        tools+=("llvm@latest")
+    fi
+
+    info "Tools to install: ${tools[*]}"
+
+    # Execute as the correct user via heredoc
+    local run_as
+    if [ "$(whoami)" == "$user_name" ]; then
+        run_as="bash -s --"
+    else
+        run_as="sudo -iu $user_name -- bash -s --"
+    fi
+
+    $run_as "$profile" "${tools[@]}" <<'MISE_EOF'
 set -e
 
-# This script block is now running inside the new shell as the correct user.
-# Set up the asdf environment for this subshell session.
-export ASDF_DATA_DIR="$HOME/.asdf"
-export PATH="$ASDF_DATA_DIR/bin:$ASDF_DATA_DIR/shims:$PATH"
+PROFILE="$1"
+shift
+TOOLS=("$@")
 
-if ! command -v asdf > /dev/null; then
-    echo "Error: asdf command not found in subshell. PATH might be incorrect." >&2
+# Set up mise environment for this subshell
+export PATH="$HOME/.local/bin:$PATH"
+
+if ! command -v mise > /dev/null; then
+    echo "Error: mise command not found. PATH=$PATH" >&2
     exit 1
 fi
 
-echo "--- Installing asdf plugins: $@"
-for plugin in "$@"; do
-    echo "--- Processing plugin: ${plugin} ---"
-    if ! asdf plugin list | grep -q "^${plugin}$"; then
-        # Use custom repository URLs for specific plugins
-        case "${plugin}" in
-            eza)
-                asdf plugin add "${plugin}" https://github.com/pauloedurezende/asdf-eza.git
-                ;;
-            zoxide)
-                asdf plugin add "${plugin}" https://github.com/pauloedurezende/asdf-zoxide.git
-                ;;
-            fzf)
-                asdf plugin add "${plugin}" https://github.com/pauloedurezende/asdf-fzf.git
-                ;;
-            clang)
-                asdf plugin add "${plugin}" https://github.com/higebu/asdf-llvm.git
-                ;;
-            *)
-                asdf plugin add "${plugin}"
-                ;;
-        esac
-    else
-        echo "Plugin '${plugin}' already exists."
-    fi
+# Add LLVM plugin if extra profile (requires custom plugin URL)
+if [[ "$PROFILE" == "extra" ]]; then
+    echo "--- Adding mise-llvm plugin ---"
+    mise plugin add llvm https://github.com/mise-plugins/mise-llvm.git 2>/dev/null || true
+fi
 
-    # Special handling for Python: install both latest and 3.10.15
-    if [ "${plugin}" == "python" ]; then
-        echo "--- Installing Python 3.10.15... ---"
-        asdf install python 3.10.15
-        echo "--- Installing latest version of Python... ---"
-        asdf install python latest
-        echo "--- Setting global version to latest (with 3.10.15 as fallback)... ---"
-        asdf set -u python latest 3.10.15
-    else
-        echo "--- Installing latest version of ${plugin}... ---"
-        asdf install "${plugin}" latest
-        echo "--- Setting global version for ${plugin}... ---"
-        asdf set -u "${plugin}" latest
-    fi
-done
+echo "--- Installing tools via mise ---"
+mise use -g -y "${TOOLS[@]}"
 
-# Special post-install handling for opencommit
-for plugin in "$@"; do
-    if [ "$plugin" == "nodejs" ]; then
-        echo "--- Node.js installed. Installing global npm package: opencommit ---"
-        asdf reshim nodejs
+echo "--- All mise tools installed successfully ---"
+mise reshim
+
+# Post-install: opencommit via npm (requires Node.js)
+if [[ "$PROFILE" == "full" || "$PROFILE" == "extra" ]]; then
+    if command -v node > /dev/null 2>&1; then
+        echo "--- Installing opencommit via npm ---"
+        eval "$(mise activate bash)"
         npm install -g opencommit
-        break
+        mise reshim
     fi
-done
-EOF
+fi
+MISE_EOF
+
+    success "mise tool installation complete for '$profile' profile."
 }
 
-# ... [The rest of the functions: install_profile_apt_packages, configure_tools, setup_chezmoi, set_default_shell, cleanup] ...
-# ... They are correct and unchanged from the previous complete version ...
-install_profile_apt_packages() {
-    local profile=$1
-    if [[ "$profile" == "extra" ]]; then
-        info "Installing APT dependencies for 'Extra' profile..."
-        $SUDO apt-get install -y --no-install-recommends ffmpegthumbnailer unar
-    fi
-}
 configure_tools() {
     local profile=$1
     if [[ "$profile" == "full" || "$profile" == "extra" ]]; then
-        info "Performing post-install configurations for 'Full/Extra' profile..."
+        info "Performing post-install configurations for 'full/extra' profile..."
         info "Setting up AstroVim (v4 method)..."
         local user_name="${SUDO_USER:-$(whoami)}"
         local user_home; user_home=$(getent passwd "$user_name" | cut -d: -f6)
@@ -296,62 +241,68 @@ configure_tools() {
         if [ ! -d "$nvim_config_dir" ]; then
             info "Cloning AstroVim template for user '$user_name'..."
             local clone_cmd="git clone --depth 1 https://github.com/AstroNvim/template \"$nvim_config_dir\" && rm -rf \"$nvim_config_dir/.git\""
-            if [ "$(whoami)" == "$user_name" ]; then bash -c "$clone_cmd"; else sudo -iu "$user_name" -- bash -c "$clone_cmd"; fi
+            if [ "$(whoami)" == "$user_name" ]; then
+                bash -c "$clone_cmd"
+            else
+                sudo -iu "$user_name" -- bash -c "$clone_cmd"
+            fi
         else
             info "AstroVim config directory already exists, skipping clone."
         fi
     fi
 }
-setup_chezmoi() {
-    local repo_url=$1
-    local target_user="${SUDO_USER:-$(whoami)}"
-    info "Restoring dotfiles for user '$target_user' from $repo_url..."
 
-    sudo -iu "$target_user" -- bash -s -- "$repo_url" <<'EOF'
-set -e
-export ASDF_DATA_DIR="$HOME/.asdf"
-export PATH="$ASDF_DATA_DIR/bin:$ASDF_DATA_DIR/shims:$PATH"
-if ! command -v chezmoi &> /dev/null; then echo "Error: chezmoi not on path in subshell" >&2; exit 1; fi
-chezmoi init --apply "$1"
-EOF
-    success "Chezmoi dotfiles restored."
-}
 set_default_shell() {
     local target_user="${SUDO_USER:-$(whoami)}"
     info "Setting default shell to Zsh for user '$target_user'..."
     if ! command -v zsh &> /dev/null; then error "Zsh is not installed."; return 1; fi
     local zsh_path; zsh_path=$(command -v zsh)
     local current_shell; current_shell=$(getent passwd "$target_user" | cut -d: -f7)
-    if [ "$current_shell" = "$zsh_path" ]; then info "Zsh is already the default shell for '$target_user'."; else sudo chsh -s "$zsh_path" "$target_user"; success "Default shell for '$target_user' has been set to $zsh_path."; fi
+    if [ "$current_shell" = "$zsh_path" ]; then
+        info "Zsh is already the default shell for '$target_user'."
+    else
+        sudo chsh -s "$zsh_path" "$target_user"
+        success "Default shell for '$target_user' has been set to $zsh_path."
+    fi
 }
+
 cleanup() {
-    info "Cleaning up APT cache and unused packages..."; $SUDO apt-get autoremove -y; $SUDO apt-get clean; $SUDO rm -rf /var/lib/apt/lists/*
+    info "Cleaning up APT cache and unused packages..."
+    $SUDO apt-get autoremove -y
+    $SUDO apt-get clean
+    $SUDO rm -rf /var/lib/apt/lists/*
     success "Cleanup complete."
 }
 
 
 # --- Script Entrypoint ---
 main() {
-    PROFILE="mini"; USE_CHEZMOI=false; CHEZMOI_REPO=""; SET_ZSH_DEFAULT=false
+    PROFILE="mini"
+    SET_ZSH_DEFAULT=false
+
     while [ "$#" -gt 0 ]; do
         case "$1" in
-            --profile) if [ -z "$2" ] || ! [[ "$2" =~ ^(mini|full|extra)$ ]]; then error "Invalid profile '$2'."; fi; PROFILE="$2"; shift 2;;
-            --chezmoi) if [ -z "$2" ]; then error "--chezmoi option requires a URL."; fi; USE_CHEZMOI=true; CHEZMOI_REPO="$2"; shift 2;;
-            --set-zsh-default) SET_ZSH_DEFAULT=true; shift 1;;
-            --help) display_help; exit 0;;
-            *) error "Unknown option: $1";;
+            --profile)
+                if [ -z "$2" ] || ! [[ "$2" =~ ^(mini|full|extra)$ ]]; then
+                    error "Invalid profile '$2'. Must be: mini, full, extra"
+                fi
+                PROFILE="$2"; shift 2 ;;
+            --set-zsh-default) SET_ZSH_DEFAULT=true; shift 1 ;;
+            --help) display_help; exit 0 ;;
+            *) error "Unknown option: $1" ;;
         esac
     done
 
     SUDO=""
     if [ "$(id -u)" -ne 0 ]; then
-        SUDO="sudo"; if ! command -v sudo >/dev/null; then error "This script needs sudo."; exit 1; fi
+        SUDO="sudo"
+        if ! command -v sudo >/dev/null; then error "This script needs sudo."; exit 1; fi
     else
         info "Running as root. Performing a self-healing bootstrap..."
         export DEBIAN_FRONTEND=noninteractive
         rm -f /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources
-        if [ -f /etc/os-release ]; then . /etc/os-release; else error "Bootstrap failed: Cannot determine Ubuntu version."; fi
-        
+        if [ -f /etc/os-release ]; then . /etc/os-release; else error "Bootstrap failed: Cannot determine OS version."; fi
+
         # Detect architecture for bootstrap mirror selection
         local arch
         case "$(uname -m)" in
@@ -363,7 +314,7 @@ main() {
             s390x) arch="s390x" ;;
             *) error "Unsupported architecture: $(uname -m)" ;;
         esac
-        
+
         # Choose appropriate mirror based on architecture
         local mirror_base
         if [ "$arch" = "x86_64" ]; then
@@ -371,7 +322,7 @@ main() {
         else
             mirror_base="http://ports.ubuntu.com/ubuntu-ports"
         fi
-        
+
         tee /etc/apt/sources.list > /dev/null <<EOF
 deb ${mirror_base}/ ${VERSION_CODENAME} main restricted universe multiverse
 deb ${mirror_base}/ ${VERSION_CODENAME}-updates main restricted universe multiverse
@@ -381,32 +332,21 @@ EOF
         apt-get install -y -qq sudo curl git liblzma-dev
     fi
 
-    if ! ( [ -f /etc/os-release ] && grep -q "ID=ubuntu" /etc/os-release ); then error "This script is designed for Ubuntu systems only."; fi
-
-    mini_plugins=("python" "chezmoi" "neovim" "uv" "zellij" "fzf" "zoxide")
-    full_plugins=("rust" "eza" "lazygit")
-    extra_plugins=("ctop" "dust" "nodejs" "golang" "clang")
-
-    declare -a plugins_to_install
-    case "$PROFILE" in
-        mini) plugins_to_install=("${mini_plugins[@]}");;
-        full) plugins_to_install=("${mini_plugins[@]}" "${full_plugins[@]}");;
-        extra) plugins_to_install=("${mini_plugins[@]}" "${full_plugins[@]}" "${extra_plugins[@]}");;
-    esac
+    if ! ( [ -f /etc/os-release ] && grep -qE "ID=(ubuntu|debian)" /etc/os-release ); then
+        error "This script is designed for Ubuntu/Debian systems only."
+    fi
 
     setup_system_dependencies
     install_profile_apt_packages "$PROFILE"
-    install_asdf
-    install_asdf_plugins "$PROFILE" "${plugins_to_install[@]}"
+    install_mise
+    install_mise_tools "$PROFILE"
     configure_tools "$PROFILE"
 
-    if [ "$USE_CHEZMOI" = true ]; then
-        setup_chezmoi "$CHEZMOI_REPO"
-    fi
     if [ "$SET_ZSH_DEFAULT" = true ]; then
         set_default_shell
     fi
+
     cleanup
-    success "Your Ubuntu system setup is complete!"
+    success "Your development environment setup is complete!"
 }
 main "$@"
