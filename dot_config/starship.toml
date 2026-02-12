@@ -1,0 +1,33 @@
+# ===========================
+# 基础外观 (Latte 适配)
+# ===========================
+[directory]
+style = "bold blue"  # 浅色背景下蓝色最清晰
+truncation_length = 3
+
+[git_branch]
+style = "bold purple" # 紫色分支
+
+[character]
+# 使用鲜艳的翠绿，兼顾美观与清晰度
+success_symbol = "[➜](bold #05c21e)"
+error_symbol = "[➜](bold #ff0044)"
+
+# ===========================
+# 语言环境 (深色高亮修正 & 去蛇化)
+# ===========================
+[python]
+style = "bold #2b5b84" # 深蓝替代看不清的亮黄
+symbol = "Py "         # 去掉蛇图标 🐍
+
+[nodejs]
+style = "bold #1f8c35"
+symbol = "⬢ "
+
+[golang]
+style = "bold #00a4bd"
+symbol = "🐹 "
+
+[rust]
+style = "bold #b7410e"
+symbol = "🦀 "
