@@ -1,0 +1,14 @@
+name: Notify devbox
+on:
+  push:
+    branches: [main]
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.DEVBOX_PAT }}" \
+            https://api.github.com/repos/charles1614/devbox/dispatches \
+            -d '{"event_type":"dotfiles-updated","client_payload":{"timestamp":"'"$(date +%s)"'"}}'
