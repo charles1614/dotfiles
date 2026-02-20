@@ -37,6 +37,7 @@ display_help() {
     echo "  --chezmoi <url>       Initialize and apply dotfiles from a chezmoi repo."
     echo "                          Example: --chezmoi https://github.com/user/dotfiles.git"
     echo "  --set-zsh-default     Set Zsh as the default login shell for the user."
+    echo "  --use-tuna-mirror     Use Tsinghua University (TUNA) mirrors for APT."
     echo "  --help                Display this help message."
 }
 
@@ -58,31 +59,56 @@ setup_system_dependencies() {
 
     info "Detected architecture: $arch"
 
-    DEFAULT_SOURCES_FILE="/etc/apt/sources.list.d/ubuntu.sources"
-    if [ -f "$DEFAULT_SOURCES_FILE" ]; then
-        info "Disabling default .sources format to enforce custom sources.list..."
-        [ ! -f "${DEFAULT_SOURCES_FILE}.bak" ] && $SUDO cp "$DEFAULT_SOURCES_FILE" "${DEFAULT_SOURCES_FILE}.bak"
-        $SUDO tee "$DEFAULT_SOURCES_FILE" > /dev/null <<EOF
+    if [ "$USE_TUNA_MIRROR" = true ]; then
+        if [ "$ID" = "ubuntu" ]; then
+            DEFAULT_SOURCES_FILE="/etc/apt/sources.list.d/ubuntu.sources"
+            if [ -f "$DEFAULT_SOURCES_FILE" ]; then
+                info "Disabling default .sources format to enforce custom sources.list..."
+                [ ! -f "${DEFAULT_SOURCES_FILE}.bak" ] && $SUDO cp "$DEFAULT_SOURCES_FILE" "${DEFAULT_SOURCES_FILE}.bak"
+                $SUDO tee "$DEFAULT_SOURCES_FILE" > /dev/null <<EOF
 # Intentionally disabled by setup script.
 EOF
-    fi
+            fi
 
-    # Choose appropriate mirror based on architecture
-    local mirror_base
-    if [ "$arch" = "x86_64" ]; then
-        info "Configuring APT to use Tsinghua University mirror (x86_64)..."
-        mirror_base="https://mirrors.tuna.tsinghua.edu.cn/ubuntu"
-    else
-        info "Configuring APT to use Tsinghua University Ubuntu Ports mirror ($arch)..."
-        mirror_base="https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports"
-    fi
+            # Choose appropriate mirror based on architecture
+            local mirror_base
+            if [ "$arch" = "x86_64" ]; then
+                info "Configuring APT to use Tsinghua University mirror (x86_64)..."
+                mirror_base="https://mirrors.tuna.tsinghua.edu.cn/ubuntu"
+            else
+                info "Configuring APT to use Tsinghua University Ubuntu Ports mirror ($arch)..."
+                mirror_base="https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports"
+            fi
 
-    $SUDO tee /etc/apt/sources.list > /dev/null <<EOF
+            $SUDO tee /etc/apt/sources.list > /dev/null <<EOF
 deb ${mirror_base}/ ${VERSION_CODENAME} main restricted universe multiverse
 deb ${mirror_base}/ ${VERSION_CODENAME}-updates main restricted universe multiverse
 deb ${mirror_base}/ ${VERSION_CODENAME}-backports main restricted universe multiverse
 deb ${mirror_base}/ ${VERSION_CODENAME}-security main restricted universe multiverse
 EOF
+        elif [ "$ID" = "debian" ]; then
+            DEFAULT_SOURCES_FILE="/etc/apt/sources.list.d/debian.sources"
+            if [ -f "$DEFAULT_SOURCES_FILE" ]; then
+                info "Disabling default .sources format to enforce custom sources.list..."
+                [ ! -f "${DEFAULT_SOURCES_FILE}.bak" ] && $SUDO cp "$DEFAULT_SOURCES_FILE" "${DEFAULT_SOURCES_FILE}.bak"
+                $SUDO tee "$DEFAULT_SOURCES_FILE" > /dev/null <<EOF
+# Intentionally disabled by setup script.
+EOF
+            fi
+
+            info "Configuring APT to use Tsinghua University Debian mirror..."
+            $SUDO tee /etc/apt/sources.list > /dev/null <<EOF
+deb https://mirrors.tuna.tsinghua.edu.cn/debian/ ${VERSION_CODENAME} main contrib non-free non-free-firmware
+deb https://mirrors.tuna.tsinghua.edu.cn/debian/ ${VERSION_CODENAME}-updates main contrib non-free non-free-firmware
+deb https://mirrors.tuna.tsinghua.edu.cn/debian/ ${VERSION_CODENAME}-backports main contrib non-free non-free-firmware
+deb https://mirrors.tuna.tsinghua.edu.cn/debian-security ${VERSION_CODENAME}-security main contrib non-free non-free-firmware
+EOF
+        else
+            info "OS ($ID) is not Ubuntu or Debian. Skipping TUNA mirror configuration."
+        fi
+    else
+        info "Keeping default APT mirror configuration..."
+    fi
 
     info "Updating package lists from mirror..."
     $SUDO apt-get update
@@ -338,6 +364,7 @@ main() {
     PROFILE="mini"
     SET_ZSH_DEFAULT=false
     CHEZMOI_REPO=""
+    USE_TUNA_MIRROR=false
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
@@ -352,6 +379,7 @@ main() {
                 fi
                 CHEZMOI_REPO="$2"; shift 2 ;;
             --set-zsh-default) SET_ZSH_DEFAULT=true; shift 1 ;;
+            --use-tuna-mirror) USE_TUNA_MIRROR=true; shift 1 ;;
             --help) display_help; exit 0 ;;
             *) error "Unknown option: $1" ;;
         esac
@@ -379,19 +407,42 @@ main() {
             *) error "Unsupported architecture: $(uname -m)" ;;
         esac
 
-        # Choose appropriate mirror based on architecture
-        local mirror_base
-        if [ "$arch" = "x86_64" ]; then
-            mirror_base="http://archive.ubuntu.com/ubuntu"
-        else
-            mirror_base="http://ports.ubuntu.com/ubuntu-ports"
-        fi
+        if [ "$ID" = "ubuntu" ]; then
+            local mirror_base
+            if [ "$USE_TUNA_MIRROR" = true ]; then
+                if [ "$arch" = "x86_64" ]; then
+                    mirror_base="https://mirrors.tuna.tsinghua.edu.cn/ubuntu"
+                else
+                    mirror_base="https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports"
+                fi
+            else
+                if [ "$arch" = "x86_64" ]; then
+                    mirror_base="http://archive.ubuntu.com/ubuntu"
+                else
+                    mirror_base="http://ports.ubuntu.com/ubuntu-ports"
+                fi
+            fi
 
-        tee /etc/apt/sources.list > /dev/null <<EOF
+            tee /etc/apt/sources.list > /dev/null <<EOF
 deb ${mirror_base}/ ${VERSION_CODENAME} main restricted universe multiverse
 deb ${mirror_base}/ ${VERSION_CODENAME}-updates main restricted universe multiverse
 deb ${mirror_base}/ ${VERSION_CODENAME}-security main restricted universe multiverse
 EOF
+        elif [ "$ID" = "debian" ]; then
+            if [ "$USE_TUNA_MIRROR" = true ]; then
+                tee /etc/apt/sources.list > /dev/null <<EOF
+deb https://mirrors.tuna.tsinghua.edu.cn/debian/ ${VERSION_CODENAME} main contrib non-free non-free-firmware
+deb https://mirrors.tuna.tsinghua.edu.cn/debian/ ${VERSION_CODENAME}-updates main contrib non-free non-free-firmware
+deb https://mirrors.tuna.tsinghua.edu.cn/debian-security ${VERSION_CODENAME}-security main contrib non-free non-free-firmware
+EOF
+            else
+                tee /etc/apt/sources.list > /dev/null <<EOF
+deb http://deb.debian.org/debian ${VERSION_CODENAME} main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian ${VERSION_CODENAME}-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security ${VERSION_CODENAME}-security main contrib non-free non-free-firmware
+EOF
+            fi
+        fi
         apt-get update -qq
         apt-get install -y -qq sudo curl git liblzma-dev
     fi
