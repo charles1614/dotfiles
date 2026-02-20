@@ -10,7 +10,7 @@
 # Tools managed by mise (profile-based):
 #   mini:  Python, uv, Neovim, fzf, zoxide, chezmoi, zellij, starship, jq, ripgrep, fd
 #   full:  mini + Node.js, Go, Rust, eza, lazygit, delta, bat
-#   extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM/Clang (via mise-plugins/mise-llvm)
+#   extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM/Clang, TinyTeX
 # ==============================================================================
 
 set -e
@@ -33,7 +33,7 @@ display_help() {
     echo "                          - mini:  Python, uv, Neovim, fzf, zoxide, chezmoi, zellij,"
     echo "                                   starship, jq, ripgrep, fd."
     echo "                          - full:  mini + Node.js, Go, Rust, eza, lazygit, delta, bat."
-    echo "                          - extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM."
+    echo "                          - extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM, TinyTeX."
     echo "  --chezmoi <url>       Initialize and apply dotfiles from a chezmoi repo."
     echo "                          Example: --chezmoi https://github.com/user/dotfiles.git"
     echo "  --set-zsh-default     Set Zsh as the default login shell for the user."
@@ -177,6 +177,7 @@ install_mise_tools() {
         tools+=("aqua:dalance/procs@latest")
         tools+=("xh@latest")
         tools+=("gping@latest")
+        tools+=("tinytex@latest")
         tools+=("clang@latest")
     fi
 
