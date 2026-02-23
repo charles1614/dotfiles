@@ -321,12 +321,12 @@ set -e
 REPO_URL="$1"
 export PATH="$HOME/.local/bin:$PATH"
 
+eval "$(mise activate bash 2>/dev/null)" || true
+
 if ! command -v chezmoi > /dev/null; then
     echo "Error: chezmoi not found. PATH=$PATH" >&2
     exit 1
 fi
-
-eval "$(mise activate bash 2>/dev/null)" || true
 
 echo "--- Running chezmoi init --apply ---"
 chezmoi init --apply "$REPO_URL"
