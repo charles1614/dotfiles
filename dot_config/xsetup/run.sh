@@ -264,8 +264,8 @@ eval "$(mise activate bash)"
 if [[ "$PROFILE" == "full" || "$PROFILE" == "extra" ]]; then
     # opencommit via npm (requires Node.js)
     if command -v node > /dev/null 2>&1; then
-        echo "--- Installing opencommit via npm ---"
-        npm install -g opencommit
+        echo "--- Installing opencommit and claude via npm ---"
+        npm install -g opencommit @anthropic-ai/claude-code
         mise reshim
     fi
 
