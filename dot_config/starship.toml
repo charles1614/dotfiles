@@ -1,6 +1,14 @@
 # ===========================
 # 基础外观 (Latte 适配)
 # ===========================
+[hostname]
+ssh_only = false
+# 直接用 bold green，去掉了默认的 dimmed 属性
+style = "bold green" 
+
+# 如果你觉得标准绿在 Latte 浅色背景下还是不够清晰，可以直接取消下面这行的注释，用你 nodejs 的那个深绿：
+# style = "bold #1f8c35"
+
 [directory]
 style = "bold blue"  # 浅色背景下蓝色最清晰
 truncation_length = 3
@@ -17,8 +25,11 @@ error_symbol = "[➜](bold #ff0044)"
 # 语言环境 (深色高亮修正 & 去蛇化)
 # ===========================
 [python]
-style = "bold #2b5b84" # 深蓝替代看不清的亮黄
-symbol = "Py "         # 去掉蛇图标 🐍
+# 使用 Python 官方标准蓝。如果觉得在你的屏幕上偏浅，可以改回你之前用的更深的 #2b5b84
+style = "bold #3776ab" 
+
+# 下面挑一个你最顺眼的，把注释去掉就行：
+symbol = "🌀 "
 
 [nodejs]
 style = "bold #1f8c35"
