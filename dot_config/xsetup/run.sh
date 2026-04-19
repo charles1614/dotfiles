@@ -200,7 +200,8 @@ install_mise_tools() {
         tools+=("dust@latest")
         tools+=("yazi@latest")
         tools+=("btop@latest")
-        tools+=("aqua:dalance/procs@latest")
+        # procs is installed via `cargo install` below: upstream does not ship
+        # aarch64-linux binaries, so the aqua/ubi backends fail on arm64.
         tools+=("xh@latest")
         tools+=("gping@latest")
         tools+=("tinytex@latest")
@@ -273,6 +274,16 @@ if [[ "$PROFILE" == "full" || "$PROFILE" == "extra" ]]; then
     if command -v cargo > /dev/null 2>&1; then
         echo "--- Installing tealdeer via cargo ---"
         cargo install tealdeer
+        mise reshim
+    fi
+fi
+
+if [[ "$PROFILE" == "extra" ]]; then
+    # procs via cargo — upstream ships no aarch64-linux binary, so we build
+    # from source on every arch for consistency.
+    if command -v cargo > /dev/null 2>&1; then
+        echo "--- Installing procs via cargo ---"
+        cargo install procs
         mise reshim
     fi
 fi
