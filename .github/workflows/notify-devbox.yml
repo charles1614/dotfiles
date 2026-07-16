@@ -6,8 +6,12 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          curl -X POST \
+      - name: Trigger devbox rebuild
+        run: |
+          # -f: fail (non-zero exit) on HTTP >= 400 so a bad/expired DEVBOX_PAT
+          #     turns the job red instead of silently "succeeding".
+          # -sS: quiet progress but still show real errors.
+          curl -sS -f -X POST \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token ${{ secrets.DEVBOX_PAT }}" \
             https://api.github.com/repos/charles1614/devbox/dispatches \
