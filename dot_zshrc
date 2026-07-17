@@ -59,7 +59,7 @@ plug "Aloxaf/fzf-tab"
 zstyle ':fzf-tab:complete:*:*' fzf-preview '
   if [ -d "$realpath" ]; then
     if command -v eza >/dev/null 2>&1; then
-      eza -1 --color=always --icons "$realpath"
+      eza -1 --color=always --icons=auto "$realpath"
     else
       ls -1 --color=always "$realpath" 2>/dev/null || ls -1 "$realpath"
     fi
@@ -87,10 +87,10 @@ alias zj="zellij"
 
 if command -v eza >/dev/null 2>&1; then
   unalias ls ll la 2>/dev/null
-  function ls()   { eza --icons "$@"; }
-  function ll()   { eza -l --git --icons "$@"; }
-  function la()   { eza -la --icons "$@"; }
-  function tree() { eza --tree --icons "$@"; }
+  function ls()   { eza --icons=auto "$@"; }
+  function ll()   { eza -l --git --icons=auto "$@"; }
+  function la()   { eza -la --icons=auto "$@"; }
+  function tree() { eza --tree --icons=auto "$@"; }
   compdef _ls ls ll la
 else
   alias ll="ls -l"
