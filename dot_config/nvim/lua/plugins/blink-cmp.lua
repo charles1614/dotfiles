@@ -4,7 +4,7 @@
 -- restores — and falls back to Lua anyway. Pin the Lua implementation to make
 -- that fallback explicit and silent; completion behavior is unchanged.
 return {
-  "Saghen/blink.cmp",
+  "saghen/blink.cmp",
   opts = {
     fuzzy = { implementation = "lua" },
   },
