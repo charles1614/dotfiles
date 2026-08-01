@@ -10,7 +10,7 @@
 # Tools managed by mise (profile-based):
 #   mini:  Python, uv, Neovim, fzf, zoxide, chezmoi, zellij, starship, jq, ripgrep, fd
 #   full:  mini + Node.js, Go, Rust, eza, lazygit, delta, bat
-#   extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM/Clang, TinyTeX
+#   extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM/Clang
 # ==============================================================================
 
 set -e
@@ -33,7 +33,7 @@ display_help() {
     echo "                          - mini:  Python, uv, Neovim, fzf, zoxide, chezmoi, zellij,"
     echo "                                   starship, jq, ripgrep, fd."
     echo "                          - full:  mini + Node.js, Go, Rust, eza, lazygit, delta, bat."
-    echo "                          - extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM, TinyTeX."
+    echo "                          - extra: full + dust, yazi, btop, procs, tealdeer, xh, gping, LLVM."
     echo "  --chezmoi <url>       Initialize and apply dotfiles from a chezmoi repo."
     echo "                          Example: --chezmoi https://github.com/user/dotfiles.git"
     echo "  --set-zsh-default     Set Zsh as the default login shell for the user."
@@ -204,7 +204,13 @@ install_mise_tools() {
         # aarch64-linux binaries, so the aqua/ubi backends fail on arm64.
         tools+=("xh@latest")
         tools+=("gping@latest")
-        tools+=("tinytex@latest")
+        # tinytex is deliberately NOT installed: the mise plugin installs
+        # bin/x86_64-linux regardless of host arch, so on arm64 every TeX
+        # binary is unrunnable ("cannot execute binary file") — ~390 MiB of
+        # dead weight. On amd64 it works, but it costs ~192 MiB compressed in
+        # the devbox offline bundle, which must stay under GitHub's 2 GiB
+        # release-asset limit. Re-add with `mise use -g tinytex@latest` on any
+        # machine that needs LaTeX.
         tools+=("clang@latest")
     fi
 
